@@ -1,0 +1,44 @@
+name: CI - Maven Test
+
+on:
+  pull_request:
+    branches: ["main", "develop"]
+  push:
+    branches: ["main", "develop"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Run Maven verify (tests + reports + coverage check)
+        run: mvn -B -ntp clean verify
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maven-surefire-reports
+          path: target/surefire-reports
+          retention-days: 30
+
+      - name: Upload JaCoCo HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: target/site/jacoco
+          retention-days: 30
