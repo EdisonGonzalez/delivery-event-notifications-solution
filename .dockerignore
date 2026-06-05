@@ -1,0 +1,13 @@
+target/
+.git/
+.gitignore
+.idea/
+.agents/
+docs/
+README.md
+LICENSE
+skills-lock.json
+*.iml
+*.log
+
+
