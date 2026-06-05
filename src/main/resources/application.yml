@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: delivery-event-notifications-solution
+  datasource:
+    url: jdbc:postgresql://localhost:5432/notifications
+    username: notifications
+    password: notifications
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+  security:
+    user:
+      name: system
+      password: system
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+
+notification:
+  scheduler:
+    fixed-delay-ms: 5000
+  retry:
+    max-attempts: 3
+    initial-delay-ms: 2000
+    multiplier: 2.0
+  replay-rate-limit:
+    requests-per-minute: 5
+  webhook:
+    connect-timeout: PT3S
+    read-timeout: PT5S
+
