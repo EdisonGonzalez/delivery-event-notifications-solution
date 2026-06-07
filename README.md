@@ -37,13 +37,14 @@ flowchart TB
 	end
 
 	subgraph Infra[Infrastructure Layer]
-		Security[Spring Security + Basic Auth]
+		Security[JWT Authentication]
 		RateLimit[Bucket4j Rate Limiter]
 		RESTAPI[REST Controllers]
 		Scheduler[Scheduled Outbox Poller]
 		WebClientAdapter[Webhook Adapter\nWebClient + Reactor Netty]
 		SSRF[SSRF + DNS Rebinding Guard]
 		JPA[JPA Repositories]
+		Database[PostgreSQL]
 		Flyway[Flyway Migrations]
 		Metrics[Micrometer + Actuator]
 		Logging[SLF4J + MDC]
@@ -62,7 +63,7 @@ flowchart TB
 		NotificationEvent[NotificationEvent]
 		Subscription[Subscription]
 		Audit[Audit]
-		Status[DeliveryStatus\nPENDING / COMPLETED / FAILED / IGNORED]
+		Status[DeliveryStatus\nPENDING / IN_PROGRESS /\nCOMPLETED / FAILED / IGNORED]
 	end
 
 	RESTClient --> Security --> RateLimit --> RESTAPI
@@ -82,7 +83,8 @@ flowchart TB
 
 	DeliverPort --> WebClientAdapter --> SSRF --> TargetWebhook
 	RepositoryPort --> JPA
-	JPA --> Flyway
+	JPA --> Database
+	Database --> Flyway
 
 	RESTAPI --> Metrics
 	Scheduler --> Metrics
@@ -100,24 +102,26 @@ flowchart LR
 	C -- Yes --> D[PENDING state]
 	D --> E[Scheduler claims batch]
 	E --> F[Claim by Update / SKIP LOCKED]
-	F --> G[Send webhook with WebClient]
-	G --> H{Success?}
-	H -- Yes --> J[Mark COMPLETED]
-	H -- No --> K[Increment retryCount]
-	K --> L{Retries left?}
-	L -- Yes --> M[Calculate backoff]
-	M --> D
-	L -- No --> N[Mark FAILED]
+	F --> G[Mark IN_PROGRESS]
+	G --> H[Send webhook with WebClient]
+	H --> J{Success?}
+	J -- Yes --> K[Mark COMPLETED]
+	J -- No --> L[Increment retryCount]
+	L --> M{Retries left?}
+	M -- Yes --> N[Calculate backoff]
+	N --> D
+	M -- No --> O[Mark FAILED]
 
 	subgraph SelfService[Self-Service REST API]
-		Q1[GET /notification_events]
-		Q2[GET /notification_events/(id)]
-		Q3[POST /notification_events/(id)/replay]
+		Q1[List Events]
+		Q2[Get Event Details]
+		Q3[Replay Event]
 	end
 
 	Q1 --> D
 	Q2 --> D
-	Q3 --> D
+	Q3 --> P[Reset to PENDING]
+	P --> D
 ```
 
 ## Design discussion model
