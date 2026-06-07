@@ -40,7 +40,7 @@ flowchart TB
 		Security[Spring Security + Basic Auth]
 		RateLimit[Bucket4j Rate Limiter]
 		RESTAPI[REST Controllers]
-		Scheduler[@Scheduled Outbox Poller]
+		Scheduler[Scheduled Outbox Poller]
 		WebClientAdapter[Webhook Adapter\nWebClient + Reactor Netty]
 		SSRF[SSRF + DNS Rebinding Guard]
 		JPA[JPA Repositories]
@@ -111,8 +111,8 @@ flowchart LR
 
 	subgraph SelfService[Self-Service REST API]
 		Q1[GET /notification_events]
-		Q2[GET /notification_events/{id}]
-		Q3[POST /notification_events/{id}/replay]
+		Q2[GET /notification_events/(id)]
+		Q3[POST /notification_events/(id)/replay]
 	end
 
 	Q1 --> D
