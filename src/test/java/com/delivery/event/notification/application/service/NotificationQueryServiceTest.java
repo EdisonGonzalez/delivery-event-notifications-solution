@@ -8,6 +8,7 @@ import com.delivery.event.notification.application.port.out.NotificationReposito
 import com.delivery.event.notification.domain.exception.NotificationNotFoundException;
 import com.delivery.event.notification.domain.model.DeliveryStatus;
 import com.delivery.event.notification.domain.model.NotificationEvent;
+import com.delivery.event.notification.infrastructure.web.dto.Page;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -28,15 +29,16 @@ class NotificationQueryServiceTest {
   void shouldReturnFilteredNotifications() {
     NotificationEvent event = new NotificationEvent();
     event.setEventId("EVT-1");
+    var page = Page.of(List.of(event), 0, 20, 1);
     when(repositoryPort.findAllByClientIdAndFilter(
-            "CLIENT-1", DeliveryStatus.COMPLETED, null, null))
-        .thenReturn(List.of(event));
+            "CLIENT-1", DeliveryStatus.COMPLETED, null, null, 0, 20))
+        .thenReturn(page);
 
-    List<NotificationEvent> result =
-        service.findAll("CLIENT-1", DeliveryStatus.COMPLETED, null, null);
+    Page<NotificationEvent> result =
+        service.findAll("CLIENT-1", DeliveryStatus.COMPLETED, null, null, 0, 20);
 
-    assertThat(result).hasSize(1);
-    assertThat(result.getFirst().getEventId()).isEqualTo("EVT-1");
+    assertThat(result.content()).hasSize(1);
+    assertThat(result.content().getFirst().getEventId()).isEqualTo("EVT-1");
   }
 
   @Test

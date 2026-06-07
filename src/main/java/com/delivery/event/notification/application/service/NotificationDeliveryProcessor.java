@@ -62,11 +62,11 @@ public class NotificationDeliveryProcessor {
     }
 
     notificationEvent.setDeliveryStatus(DeliveryStatus.IN_PROGRESS);
-    notificationRepositoryPort.save(notificationEvent);
+    NotificationEvent persistedEvent = notificationRepositoryPort.save(notificationEvent);
 
-    webhookDeliveryPort.deliver(notificationEvent).join();
-    notificationEvent.markCompleted();
-    return notificationRepositoryPort.save(notificationEvent);
+    webhookDeliveryPort.deliver(persistedEvent).join();
+    persistedEvent.markCompleted();
+    return notificationRepositoryPort.save(persistedEvent);
   }
 
   /**
@@ -79,9 +79,15 @@ public class NotificationDeliveryProcessor {
   @SuppressWarnings("unused")
   @Recover
   public NotificationEvent recover(RuntimeException ex, NotificationEvent notificationEvent) {
-    notificationEvent.setRetryCount(maxAttempts);
-    notificationEvent.markFailed(ex.getMessage());
-    notificationEvent.setNextAttemptAt(null);
-    return notificationRepositoryPort.save(notificationEvent);
+    NotificationEvent eventToRecover = notificationEvent;
+    if (notificationEvent.getId() != null) {
+      eventToRecover =
+          notificationRepositoryPort.findById(notificationEvent.getId()).orElse(notificationEvent);
+    }
+
+    eventToRecover.setRetryCount(maxAttempts);
+    eventToRecover.markFailed(ex.getMessage());
+    eventToRecover.setNextAttemptAt(null);
+    return notificationRepositoryPort.save(eventToRecover);
   }
 }

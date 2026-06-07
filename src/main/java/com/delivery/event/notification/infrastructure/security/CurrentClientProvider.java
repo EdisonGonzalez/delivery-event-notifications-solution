@@ -1,5 +1,6 @@
 package com.delivery.event.notification.infrastructure.security;
 
+import com.delivery.event.notification.infrastructure.config.CustomUserDetails;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -9,17 +10,17 @@ import org.springframework.stereotype.Component;
 public class CurrentClientProvider {
 
   /**
-   * Obtiene el clientId autenticado desde el contexto de seguridad.
+   * Retrieves the client identifier of the currently authenticated user from the security context.
    *
-   * @return Identificador del cliente autenticado.
+   * @return The client identifier of the authenticated user.
    */
   public String currentClientId() {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
     if (authentication == null
-        || authentication.getName() == null
-        || authentication.getName().isBlank()) {
+        || authentication.getPrincipal() == null
+        || !(authentication.getPrincipal() instanceof CustomUserDetails userDetails)) {
       throw new IllegalStateException("No authenticated client present");
     }
-    return authentication.getName();
+    return userDetails.getClientId();
   }
 }

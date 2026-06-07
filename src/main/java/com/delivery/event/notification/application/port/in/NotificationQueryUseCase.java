@@ -2,8 +2,8 @@ package com.delivery.event.notification.application.port.in;
 
 import com.delivery.event.notification.domain.model.DeliveryStatus;
 import com.delivery.event.notification.domain.model.NotificationEvent;
+import com.delivery.event.notification.infrastructure.web.dto.Page;
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 /** Use case for querying notification events by the authenticated client. */
@@ -16,9 +16,12 @@ public interface NotificationQueryUseCase {
    * @param status notification state
    * @param from instant value for get the notifications from
    * @param to instant value for get the notifications to
-   * @return NotificationEvent list
+   * @param page page number (zero-based)
+   * @param size page size
+   * @return Page of NotificationEvent
    */
-  List<NotificationEvent> findAll(String clientId, DeliveryStatus status, Instant from, Instant to);
+  Page<NotificationEvent> findAll(
+      String clientId, DeliveryStatus status, Instant from, Instant to, int page, int size);
 
   /**
    * Find event by id

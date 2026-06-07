@@ -1,22 +1,26 @@
 package com.delivery.event.notification.infrastructure.web;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.delivery.event.notification.domain.model.NotificationEvent;
-import java.util.Arrays;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-// import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -29,7 +33,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 @ActiveProfiles("test")
-// @Disabled("Requires Docker - enable in local/dev environment with Docker available")
 class NotificationEventControllerIntegrationTest {
 
   @Container
@@ -47,9 +50,9 @@ class NotificationEventControllerIntegrationTest {
     registry.add("spring.datasource.password", postgres::getPassword);
     registry.add("spring.flyway.enabled", () -> "false");
     registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
-    // Provide a test user that matches the seeded data client-id (client-a)
-    registry.add("spring.security.user.name", () -> "client-a");
-    registry.add("spring.security.user.password", () -> "password");
+    // JWT secret for testing
+    registry.add(
+        "jwt.secret", () -> "test-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm");
   }
 
   @LocalServerPort int port;
@@ -58,9 +61,39 @@ class NotificationEventControllerIntegrationTest {
 
   @Autowired JdbcTemplate jdbcTemplate;
 
+  @Autowired PasswordEncoder passwordEncoder;
+
+  @Autowired ObjectMapper objectMapper;
+
+  private static final String USERNAME = "client-a";
+  private static final String CLIENT_ID = "client-a";
+  private static final String RAW_PASSWORD = "client-a-password";
+
+  private String jwtToken;
+
   @BeforeEach
   void seedData() {
     jdbcTemplate.update("delete from notification_events");
+    jdbcTemplate.update("delete from user_roles");
+    jdbcTemplate.update("delete from users");
+
+    // Insert test user
+    jdbcTemplate.update(
+        """
+                insert into users (id, username, password, client_id, enabled, created_at, updated_at)
+                values (cast(? as uuid), ?, ?, ?, ?, now(), now())
+                """,
+        "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        USERNAME,
+        passwordEncoder.encode(RAW_PASSWORD),
+        CLIENT_ID,
+        true);
+    jdbcTemplate.update(
+        "insert into user_roles (user_id, role_name) values (cast(? as uuid), ?)",
+        "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "ROLE_CLIENT");
+
+    jwtToken = authenticateAndGetToken();
 
     jdbcTemplate.update(
         """
@@ -143,47 +176,57 @@ class NotificationEventControllerIntegrationTest {
 
   @Test
   void shouldReturnEventsForAuthenticatedClient() {
-    ResponseEntity<NotificationEvent[]> resp =
-        restTemplate
-            .withBasicAuth("client-a", "password")
-            .getForEntity(
-                "http://localhost:" + port + "/notification_events", NotificationEvent[].class);
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(jwtToken);
+    HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+    ResponseEntity<Map> resp =
+        restTemplate.exchange(
+            "http://localhost:" + port + "/notification_events", HttpMethod.GET, entity, Map.class);
 
     assertEquals(HttpStatus.OK, resp.getStatusCode());
-    NotificationEvent[] body = resp.getBody();
-    assertTrue(body != null && body.length >= 1);
-    boolean found =
-        Arrays.stream(body)
-            .anyMatch(e -> "11111111-1111-1111-1111-111111111111".equals(e.getId().toString()));
-    assertTrue(found, "Expected seeded event for client-a to be present");
+    Map<String, Object> body = resp.getBody();
+    assertNotNull(body);
+    assertTrue(body.containsKey("content"));
+    assertTrue(body.containsKey("pageNumber"));
+    assertTrue(body.containsKey("pageSize"));
+    assertTrue(body.containsKey("totalElements"));
+    assertTrue(body.containsKey("totalPages"));
   }
 
   @Test
   void shouldNotAllowAccessToOtherClientsEvents() {
     // client-a should not be able to fetch client-b event
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(jwtToken);
+    HttpEntity<Void> entity = new HttpEntity<>(headers);
+
     ResponseEntity<String> resp =
-        restTemplate
-            .withBasicAuth("client-a", "password")
-            .getForEntity(
-                "http://localhost:"
-                    + port
-                    + "/notification_events/22222222-2222-2222-2222-222222222222",
-                String.class);
+        restTemplate.exchange(
+            "http://localhost:"
+                + port
+                + "/notification_events/22222222-2222-2222-2222-222222222222",
+            HttpMethod.GET,
+            entity,
+            String.class);
 
     assertEquals(HttpStatus.NOT_FOUND, resp.getStatusCode());
   }
 
   @Test
   void shouldReplayFailedEventForAuthenticatedClient() {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(jwtToken);
+    HttpEntity<Void> entity = new HttpEntity<>(headers);
+
     ResponseEntity<Void> resp =
-        restTemplate
-            .withBasicAuth("client-a", "password")
-            .postForEntity(
-                "http://localhost:"
-                    + port
-                    + "/notification_events/33333333-3333-3333-3333-333333333333/replay",
-                null,
-                Void.class);
+        restTemplate.exchange(
+            "http://localhost:"
+                + port
+                + "/notification_events/33333333-3333-3333-3333-333333333333/replay",
+            HttpMethod.POST,
+            entity,
+            Void.class);
 
     assertEquals(HttpStatus.ACCEPTED, resp.getStatusCode());
 
@@ -210,16 +253,86 @@ class NotificationEventControllerIntegrationTest {
 
   @Test
   void shouldRejectReplayWhenEventIsNotFailed() {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(jwtToken);
+    HttpEntity<Void> entity = new HttpEntity<>(headers);
+
     ResponseEntity<String> resp =
-        restTemplate
-            .withBasicAuth("client-a", "password")
-            .postForEntity(
-                "http://localhost:"
-                    + port
-                    + "/notification_events/11111111-1111-1111-1111-111111111111/replay",
-                null,
-                String.class);
+        restTemplate.exchange(
+            "http://localhost:"
+                + port
+                + "/notification_events/11111111-1111-1111-1111-111111111111/replay",
+            HttpMethod.POST,
+            entity,
+            String.class);
 
     assertEquals(HttpStatus.CONFLICT, resp.getStatusCode());
   }
+
+  @Test
+  void shouldSupportPaginationWithPageAndSize() {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(jwtToken);
+    HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+    ResponseEntity<Map> firstPage =
+        restTemplate.exchange(
+            "http://localhost:" + port + "/notification_events?page=0&size=1",
+            HttpMethod.GET,
+            entity,
+            Map.class);
+    ResponseEntity<Map> secondPage =
+        restTemplate.exchange(
+            "http://localhost:" + port + "/notification_events?page=1&size=1",
+            HttpMethod.GET,
+            entity,
+            Map.class);
+
+    assertEquals(HttpStatus.OK, firstPage.getStatusCode());
+    assertEquals(HttpStatus.OK, secondPage.getStatusCode());
+    assertNotNull(firstPage.getBody());
+    assertNotNull(secondPage.getBody());
+
+    // Verification of pagination structure
+    assertTrue(firstPage.getBody().containsKey("content"));
+    assertTrue(firstPage.getBody().containsKey("pageSize"));
+    int pageSize = ((Number) firstPage.getBody().get("pageSize")).intValue();
+    assertEquals(1, pageSize);
+  }
+
+  @Test
+  void shouldFilterBySnakeCaseDeliveryStatusParameter() {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(jwtToken);
+    HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+    ResponseEntity<Map> response =
+        restTemplate.exchange(
+            "http://localhost:" + port + "/notification_events?delivery_status=FAILED",
+            HttpMethod.GET,
+            entity,
+            Map.class);
+
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    Map<String, Object> body = response.getBody();
+    assertNotNull(body);
+    assertTrue(body.containsKey("content"));
+    assertTrue(body.containsKey("totalElements"));
+  }
+
+  private String authenticateAndGetToken() {
+    LoginRequest request = new LoginRequest(USERNAME, RAW_PASSWORD);
+    ResponseEntity<LoginResponse> response =
+        restTemplate.postForEntity(
+            "http://localhost:" + port + "/auth/login", request, LoginResponse.class);
+
+    assertEquals(HttpStatus.OK, response.getStatusCode());
+    assertNotNull(response.getBody());
+    assertNotNull(response.getBody().token());
+    return response.getBody().token();
+  }
+
+  private record LoginRequest(String username, String password) {}
+
+  private record LoginResponse(String token) {}
 }

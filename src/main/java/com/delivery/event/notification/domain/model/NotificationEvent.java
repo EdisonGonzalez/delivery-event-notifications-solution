@@ -1,13 +1,18 @@
 package com.delivery.event.notification.domain.model;
 
 import java.time.Instant;
-
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 /** Domain object representing a notification event to be delivered. */
 @Setter
 @Getter
+@NoArgsConstructor
+@AllArgsConstructor
+@SuperBuilder
 public class NotificationEvent extends Audit {
 
   private String eventId;

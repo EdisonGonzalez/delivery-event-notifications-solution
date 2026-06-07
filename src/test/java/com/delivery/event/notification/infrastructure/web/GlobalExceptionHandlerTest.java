@@ -9,6 +9,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 
 class GlobalExceptionHandlerTest {
 
@@ -44,6 +45,17 @@ class GlobalExceptionHandlerTest {
     assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
     assertNotNull(response.getBody());
     assertEquals("bad request", response.getBody().get("error"));
+    assertNotNull(response.getBody().get("timestamp"));
+  }
+
+  @Test
+  void shouldMapAuthenticationExceptionTo401() {
+    ResponseEntity<Map<String, Object>> response =
+        handler.handleAuthentication(new BadCredentialsException("Bad credentials"));
+
+    assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+    assertNotNull(response.getBody());
+    assertEquals("Invalid credentials", response.getBody().get("error"));
     assertNotNull(response.getBody().get("timestamp"));
   }
 }

@@ -5,6 +5,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -26,11 +28,12 @@ public interface NotificationEventJpaRepository
 			  and e.createdAt <= coalesce(:to, e.createdAt)
 			order by e.createdAt desc
 			""")
-  List<NotificationEventEntity> findAllByClientIdAndFilter(
+  Page<NotificationEventEntity> findAllByClientIdAndFilter(
       @Param("clientId") String clientId,
       @Param("status") DeliveryStatus status,
       @Param("from") Instant from,
-      @Param("to") Instant to);
+      @Param("to") Instant to,
+      Pageable pageable);
 
   /** Claims a batch of pending events using pessimistic non-blocking lock. */
   @Query(

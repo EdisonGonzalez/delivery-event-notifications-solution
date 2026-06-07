@@ -1,5 +1,6 @@
 package com.delivery.event.notification.application.service;
 
+import com.delivery.event.notification.application.port.in.CreateNotificationEventUseCase;
 import com.delivery.event.notification.application.port.in.NotificationQueryUseCase;
 import com.delivery.event.notification.application.port.in.NotificationReplayUseCase;
 import com.delivery.event.notification.application.port.in.ProcessNotificationUseCase;
@@ -32,6 +33,16 @@ public class ApplicationServiceConfiguration {
   public NotificationReplayUseCase notificationReplayUseCase(
       NotificationRepositoryPort notificationRepositoryPort) {
     return new NotificationReplayService(notificationRepositoryPort);
+  }
+
+  /**
+   * @param notificationRepositoryPort Notification persistence port.
+   * @return Create notification event use case implementation (development/testing only).
+   */
+  @Bean
+  public CreateNotificationEventUseCase createNotificationEventUseCase(
+      NotificationRepositoryPort notificationRepositoryPort) {
+    return new CreateNotificationEventService(notificationRepositoryPort);
   }
 
   /**

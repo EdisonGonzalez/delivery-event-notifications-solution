@@ -3,7 +3,7 @@ package com.delivery.event.notification.infrastructure.persistence.adapter;
 import com.delivery.event.notification.application.port.out.SubscriptionPort;
 import com.delivery.event.notification.domain.model.Subscription;
 import com.delivery.event.notification.infrastructure.persistence.jpa.SubscriptionJpaRepository;
-import com.delivery.event.notification.infrastructure.persistence.mapper.NotificationEventMapper;
+import com.delivery.event.notification.infrastructure.persistence.mapper.SubscriptionJpaMapper;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
 
@@ -12,12 +12,16 @@ import org.springframework.stereotype.Repository;
 public class SubscriptionRepositoryAdapter implements SubscriptionPort {
 
   private final SubscriptionJpaRepository repository;
+  private final SubscriptionJpaMapper mapper;
 
   /**
    * @param repository JPA repository for subscriptions
+   * @param mapper JPA mapper for subscriptions
    */
-  public SubscriptionRepositoryAdapter(SubscriptionJpaRepository repository) {
+  public SubscriptionRepositoryAdapter(
+      SubscriptionJpaRepository repository, SubscriptionJpaMapper mapper) {
     this.repository = repository;
+    this.mapper = mapper;
   }
 
   /** {@inheritDoc} */
@@ -25,6 +29,6 @@ public class SubscriptionRepositoryAdapter implements SubscriptionPort {
   public Optional<Subscription> findActiveSubscription(String clientId, String eventType) {
     return repository
         .findActiveSubscription(clientId, eventType)
-        .map(NotificationEventMapper::toDomain);
+        .map(mapper::toDomain);
   }
 }

@@ -5,8 +5,8 @@ import com.delivery.event.notification.application.port.out.NotificationReposito
 import com.delivery.event.notification.domain.exception.NotificationNotFoundException;
 import com.delivery.event.notification.domain.model.DeliveryStatus;
 import com.delivery.event.notification.domain.model.NotificationEvent;
+import com.delivery.event.notification.infrastructure.web.dto.Page;
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
 /** Query use case implementation. */
@@ -23,9 +23,10 @@ public class NotificationQueryService implements NotificationQueryUseCase {
 
   /** {@inheritDoc} */
   @Override
-  public List<NotificationEvent> findAll(
-      String clientId, DeliveryStatus status, Instant from, Instant to) {
-    return notificationRepositoryPort.findAllByClientIdAndFilter(clientId, status, from, to);
+  public Page<NotificationEvent> findAll(
+      String clientId, DeliveryStatus status, Instant from, Instant to, int page, int size) {
+    return notificationRepositoryPort.findAllByClientIdAndFilter(
+        clientId, status, from, to, page, size);
   }
 
   /** {@inheritDoc} */

@@ -3,6 +3,7 @@ package com.delivery.event.notification.infrastructure.security;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.delivery.event.notification.infrastructure.config.CustomUserDetails;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -19,8 +20,10 @@ class CurrentClientProviderTest {
 
   @Test
   void shouldReturnAuthenticatedClientId() {
+    CustomUserDetails userDetails = new CustomUserDetails("client-a", "password", "client-a");
     SecurityContextHolder.getContext()
-        .setAuthentication(new UsernamePasswordAuthenticationToken("client-a", "n/a"));
+        .setAuthentication(
+            new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities()));
 
     assertEquals("client-a", provider.currentClientId());
   }
@@ -33,9 +36,9 @@ class CurrentClientProviderTest {
   }
 
   @Test
-  void shouldRejectWhenAuthenticationNameIsBlank() {
+  void shouldRejectWhenPrincipalIsNotCustomUserDetails() {
     SecurityContextHolder.getContext()
-        .setAuthentication(new UsernamePasswordAuthenticationToken("   ", "n/a"));
+        .setAuthentication(new UsernamePasswordAuthenticationToken("client-a", "n/a"));
 
     assertThrows(IllegalStateException.class, provider::currentClientId);
   }

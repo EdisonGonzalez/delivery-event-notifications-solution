@@ -1,0 +1,30 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    # Use Docker PostgreSQL exposed by docker-compose.override.yml
+    url: jdbc:postgresql://localhost:5433/notifications
+    username: notifications
+    password: notifications
+  flyway:
+    enabled: true
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: true
+
+logging:
+  trace:
+    enabled: true
+  level:
+    root: TRACE
+    com.delivery: TRACE
+    com.delivery.event.notification.infrastructure.config.MethodTraceAspect: TRACE
+    org.springframework: TRACE
+    org.springframework.security: TRACE
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql: TRACE
+

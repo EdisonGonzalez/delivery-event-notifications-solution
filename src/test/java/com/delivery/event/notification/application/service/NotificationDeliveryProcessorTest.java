@@ -15,12 +15,14 @@ import com.delivery.event.notification.domain.model.Subscription;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.ArgumentCaptor;
 
 @ExtendWith(MockitoExtension.class)
 class NotificationDeliveryProcessorTest {
@@ -94,6 +96,34 @@ class NotificationDeliveryProcessorTest {
     assertEquals("boom", result.getReason());
     assertNull(result.getNextAttemptAt());
     verify(notificationRepositoryPort).save(event);
+  }
+
+  @Test
+  void recoverShouldUseLatestPersistedEventWhenIdIsPresent() {
+    UUID id = UUID.randomUUID();
+
+    NotificationEvent staleEvent = baseEvent();
+    staleEvent.setId(id);
+    staleEvent.setVersion(0L);
+
+    NotificationEvent latestEvent = baseEvent();
+    latestEvent.setId(id);
+    latestEvent.setVersion(1L);
+
+    when(notificationRepositoryPort.findById(id)).thenReturn(Optional.of(latestEvent));
+    when(notificationRepositoryPort.save(any(NotificationEvent.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    NotificationEvent result = processor.recover(new RuntimeException("boom"), staleEvent);
+
+    assertEquals(DeliveryStatus.FAILED, result.getDeliveryStatus());
+    assertEquals(3, result.getRetryCount());
+    assertEquals("boom", result.getReason());
+
+    ArgumentCaptor<NotificationEvent> captor = ArgumentCaptor.forClass(NotificationEvent.class);
+    verify(notificationRepositoryPort).save(captor.capture());
+    assertEquals(id, captor.getValue().getId());
+    assertEquals(1L, captor.getValue().getVersion());
   }
 
   private NotificationEvent baseEvent() {

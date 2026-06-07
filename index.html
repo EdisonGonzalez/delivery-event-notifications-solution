@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery Event Notifications - Tech Talk</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .card-gradient {
+            background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+        }
+        
+        .slide {
+            min-height: 100vh;
+            scroll-snap-align: start;
+        }
+        
+        .scroll-container {
+            scroll-snap-type: y mandatory;
+            overflow-y: scroll;
+            height: 100vh;
+        }
+        
+        .code-block {
+            background: #1e293b;
+            border-radius: 8px;
+            padding: 1rem;
+            color: #e2e8f0;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.875rem;
+            overflow-x: auto;
+        }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            background: #667eea;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 0 0 3px #667eea;
+        }
+        
+        .nav-dot {
+            transition: all 0.3s ease;
+        }
+        
+        .nav-dot.active {
+            background: #667eea;
+            transform: scale(1.3);
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <!-- Navigation Dots -->
+    <div class="fixed right-6 top-1/2 transform -translate-y-1/2 z-50 flex flex-col gap-3">
+        <button onclick="scrollToSlide(0)" class="nav-dot w-3 h-3 rounded-full bg-slate-300 hover:bg-slate-500 active" data-slide="0"></button>
+        <button onclick="scrollToSlide(1)" class="nav-dot w-3 h-3 rounded-full bg-slate-300 hover:bg-slate-500" data-slide="1"></button>
+        <button onclick="scrollToSlide(2)" class="nav-dot w-3 h-3 rounded-full bg-slate-300 hover:bg-slate-500" data-slide="2"></button>
+        <button onclick="scrollToSlide(3)" class="nav-dot w-3 h-3 rounded-full bg-slate-300 hover:bg-slate-500" data-slide="3"></button>
+        <button onclick="scrollToSlide(4)" class="nav-dot w-3 h-3 rounded-full bg-slate-300 hover:bg-slate-500" data-slide="4"></button>
+        <button onclick="scrollToSlide(5)" class="nav-dot w-3 h-3 rounded-full bg-slate-300 hover:bg-slate-500" data-slide="5"></button>
+        <button onclick="scrollToSlide(6)" class="nav-dot w-3 h-3 rounded-full bg-slate-300 hover:bg-slate-500" data-slide="6"></button>
+        <button onclick="scrollToSlide(7)" class="nav-dot w-3 h-3 rounded-full bg-slate-300 hover:bg-slate-500" data-slide="7"></button>
+        <button onclick="scrollToSlide(8)" class="nav-dot w-3 h-3 rounded-full bg-slate-300 hover:bg-slate-500" data-slide="8"></button>
+    </div>
+
+    <div class="scroll-container" id="scrollContainer">
+        <!-- Slide 1: Title -->
+        <section class="slide gradient-bg flex items-center justify-center p-8" id="slide-0">
+            <div class="text-center text-white max-w-4xl fade-in">
+                <div class="mb-6">
+                    <i class="fas fa-bell text-6xl mb-4"></i>
+                </div>
+                <h1 class="text-5xl md:text-7xl font-bold mb-6">Delivery Event Notifications</h1>
+                <p class="text-xl md:text-2xl mb-8 opacity-90">A Cloud-Native Webhook Notification System</p>
+                <div class="flex flex-wrap justify-center gap-4 mb-8">
+                    <span class="bg-white/20 px-4 py-2 rounded-full text-sm font-medium">Hexagonal Architecture</span>
+                    <span class="bg-white/20 px-4 py-2 rounded-full text-sm font-medium">Event-Driven</span>
+                    <span class="bg-white/20 px-4 py-2 rounded-full text-sm font-medium">Spring Boot</span>
+                    <span class="bg-white/20 px-4 py-2 rounded-full text-sm font-medium">OWASP Secure</span>
+                </div>
+                <p class="text-lg opacity-75">Proof of Concept Implementation</p>
+                <div class="mt-12">
+                    <button onclick="scrollToSlide(1)" class="bg-white text-purple-600 px-8 py-3 rounded-full font-semibold hover:bg-opacity-90 transition">
+                        Start Presentation <i class="fas fa-arrow-down ml-2"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 2: The Challenge -->
+        <section class="slide flex items-center justify-center p-8 bg-white" id="slide-1">
+            <div class="max-w-6xl w-full">
+                <h2 class="text-4xl font-bold text-slate-800 mb-8 text-center">
+                    <i class="fas fa-exclamation-triangle text-amber-500 mr-3"></i>
+                    The Challenge
+                </h2>
+                
+                <div class="grid md:grid-cols-2 gap-8">
+                    <div class="card-gradient p-6 rounded-2xl shadow-lg border border-slate-200">
+                        <h3 class="text-xl font-semibold text-slate-700 mb-4">
+                            <i class="fas fa-cloud text-blue-500 mr-2"></i>
+                            Platform Context
+                        </h3>
+                        <ul class="space-y-3 text-slate-600">
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-500 mr-2 mt-1"></i>
+                                <span>Cloud-native architecture</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-500 mr-2 mt-1"></i>
+                                <span>Event-driven microservices</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-500 mr-2 mt-1"></i>
+                                <span>Transactional operations</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-500 mr-2 mt-1"></i>
+                                <span>Manages accounts, payments, transactions</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="card-gradient p-6 rounded-2xl shadow-lg border border-slate-200">
+                        <h3 class="text-xl font-semibold text-slate-700 mb-4">
+                            <i class="fas fa-bullseye text-red-500 mr-2"></i>
+                            Problem Statement
+                        </h3>
+                        <p class="text-slate-600 mb-4">
+                            Implement a notification system capable of delivering platform events to client-owned webhook endpoints.
+                        </p>
+                        <div class="flex flex-wrap gap-2">
+                            <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm">Balance Updated</span>
+                            <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm">Resource Created</span>
+                            <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm">Resource Updated</span>
+                            <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm">Resource Deleted</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 card-gradient p-6 rounded-2xl shadow-lg border border-slate-200">
+                    <h3 class="text-xl font-semibold text-slate-700 mb-4">
+                        <i class="fas fa-list-check text-indigo-500 mr-2"></i>
+                        Core Functional Requirements
+                    </h3>
+                    <div class="grid md:grid-cols-3 gap-4">
+                        <div class="bg-slate-50 p-4 rounded-xl">
+                            <h4 class="font-semibold text-slate-800 mb-2">FR-1: Subscription Validation</h4>
+                            <p class="text-sm text-slate-600">Verify active subscriptions and client ownership before delivery</p>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl">
+                            <h4 class="font-semibold text-slate-800 mb-2">FR-2: Webhook Delivery</h4>
+                            <p class="text-sm text-slate-600">Deliver notifications via HTTPS to client-configured endpoints</p>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl">
+                            <h4 class="font-semibold text-slate-800 mb-2">FR-3: Retry Strategy</h4>
+                            <p class="text-sm text-slate-600">Automatic retries with exponential backoff, avoiding infinite loops</p>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl">
+                            <h4 class="font-semibold text-slate-800 mb-2">FR-4: Delivery Persistence</h4>
+                            <p class="text-sm text-slate-600">Store delivery attempts, errors, timestamps, and final results</p>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl">
+                            <h4 class="font-semibold text-slate-800 mb-2">FR-5: Observability</h4>
+                            <p class="text-sm text-slate-600">Near real-time monitoring with metrics, logs, and traces</p>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl">
+                            <h4 class="font-semibold text-slate-800 mb-2">Self-Service API</h4>
+                            <p class="text-sm text-slate-600">REST API for clients to query and replay notifications</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 3: Notification Events -->
+        <section class="slide flex items-center justify-center p-8 bg-slate-100" id="slide-2">
+            <div class="max-w-6xl w-full">
+                <h2 class="text-4xl font-bold text-slate-800 mb-8 text-center">
+                    <i class="fas fa-database text-green-500 mr-3"></i>
+                    Notification Events Data
+                </h2>
+                
+                <div class="card-gradient p-6 rounded-2xl shadow-lg border border-slate-200 mb-6">
+                    <p class="text-slate-600 mb-4">
+                        The system processes various financial events with different delivery statuses. Here's a sample from our notification events:
+                    </p>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-slate-100">
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Event ID</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Type</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Content</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Status</th>
+                                    <th class="px-4 py-3 text-left font-semibold text-slate-700">Client</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b border-slate-200">
+                                    <td class="px-4 py-3 font-mono text-slate-600">EVT001</td>
+                                    <td class="px-4 py-3"><span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">credit_card_payment</span></td>
+                                    <td class="px-4 py-3 text-slate-600">Credit card payment received for $150.00</td>
+                                    <td class="px-4 py-3"><span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">completed</span></td>
+                                    <td class="px-4 py-3 font-mono text-slate-600">CLIENT001</td>
+                                </tr>
+                                <tr class="border-b border-slate-200">
+                                    <td class="px-4 py-3 font-mono text-slate-600">EVT002</td>
+                                    <td class="px-4 py-3"><span class="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs">debit_card_withdrawal</span></td>
+                                    <td class="px-4 py-3 text-slate-600">ATM withdrawal of $200.00</td>
+                                    <td class="px-4 py-3"><span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">completed</span></td>
+                                    <td class="px-4 py-3 font-mono text-slate-600">CLIENT001</td>
+                                </tr>
+                                <tr class="border-b border-slate-200 bg-red-50">
+                                    <td class="px-4 py-3 font-mono text-slate-600">EVT003</td>
+                                    <td class="px-4 py-3"><span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">credit_transfer</span></td>
+                                    <td class="px-4 py-3 text-slate-600">Bank transfer received from Account #4567 for $1,500.00</td>
+                                    <td class="px-4 py-3"><span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">failed</span></td>
+                                    <td class="px-4 py-3 font-mono text-slate-600">CLIENT002</td>
+                                </tr>
+                                <tr class="border-b border-slate-200">
+                                    <td class="px-4 py-3 font-mono text-slate-600">EVT004</td>
+                                    <td class="px-4 py-3"><span class="bg-orange-100 text-orange-700 px-2 py-1 rounded text-xs">debit_automatic_payment</span></td>
+                                    <td class="px-4 py-3 text-slate-600">Monthly utility bill payment of $85.50</td>
+                                    <td class="px-4 py-3"><span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">completed</span></td>
+                                    <td class="px-4 py-3 font-mono text-slate-600">CLIENT002</td>
+                                </tr>
+                                <tr class="border-b border-slate-200 bg-red-50">
+                                    <td class="px-4 py-3 font-mono text-slate-600">EVT005</td>
+                                    <td class="px-4 py-3"><span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">credit_refund</span></td>
+                                    <td class="px-4 py-3 text-slate-600">Refund processed for order #789 for $45.99</td>
+                                    <td class="px-4 py-3"><span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">failed</span></td>
+                                    <td class="px-4 py-3 font-mono text-slate-600">CLIENT003</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="grid md:grid-cols-3 gap-4">
+                    <div class="bg-white p-4 rounded-xl shadow border border-slate-200 text-center">
+                        <div class="text-3xl font-bold text-green-600">7</div>
+                        <div class="text-sm text-slate-600">Completed Events</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow border border-slate-200 text-center">
+                        <div class="text-3xl font-bold text-red-600">3</div>
+                        <div class="text-sm text-slate-600">Failed Events</div>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow border border-slate-200 text-center">
+                        <div class="text-3xl font-bold text-blue-600">3</div>
+                        <div class="text-sm text-slate-600">Unique Clients</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 4: Solution Architecture -->
+        <section class="slide flex items-center justify-center p-8 bg-white" id="slide-3">
+            <div class="max-w-6xl w-full">
+                <h2 class="text-4xl font-bold text-slate-800 mb-8 text-center">
+                    <i class="fas fa-cubes text-purple-500 mr-3"></i>
+                    Solution Architecture
+                </h2>
+                
+                <div class="card-gradient p-6 rounded-2xl shadow-lg border border-slate-200 mb-6">
+                    <h3 class="text-xl font-semibold text-slate-700 mb-4 text-center">Hexagonal Architecture Pattern</h3>
+                    
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="bg-blue-50 p-5 rounded-xl border-2 border-blue-200">
+                            <div class="flex items-center mb-3">
+                                <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white mr-3">
+                                    <i class="fas fa-shield-alt"></i>
+                                </div>
+                                <h4 class="font-bold text-blue-800">Domain Layer</h4>
+                            </div>
+                            <ul class="text-sm text-slate-600 space-y-2">
+                                <li>• NotificationEvent entity</li>
+                                <li>• Subscription entity</li>
+                                <li>• DeliveryStatus enum</li>
+                                <li>• Audit base class</li>
+                                <li>• Business rules & invariants</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-green-50 p-5 rounded-xl border-2 border-green-200">
+                            <div class="flex items-center mb-3">
+                                <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white mr-3">
+                                    <i class="fas fa-cogs"></i>
+                                </div>
+                                <h4 class="font-bold text-green-800">Application Layer</h4>
+                            </div>
+                            <ul class="text-sm text-slate-600 space-y-2">
+                                <li>• Use cases (Query, Replay, Process)</li>
+                                <li>• Ports (Repository, Delivery, Subscription)</li>
+                                <li>• Business logic orchestration</li>
+                                <li>• Transaction management</li>
+                                <li>• Domain service coordination</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="bg-purple-50 p-5 rounded-xl border-2 border-purple-200">
+                            <div class="flex items-center mb-3">
+                                <div class="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center text-white mr-3">
+                                    <i class="fas fa-server"></i>
+                                </div>
+                                <h4 class="font-bold text-purple-800">Infrastructure Layer</h4>
+                            </div>
+                            <ul class="text-sm text-slate-600 space-y-2">
+                                <li>• REST Controllers</li>
+                                <li>• JPA Repository adapters</li>
+                                <li>• WebClient webhook adapter</li>
+                                <li>• Spring Security + JWT</li>
+                                <li>• Observability (Micrometer)</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-gradient p-6 rounded-2xl shadow-lg border border-slate-200">
+                    <h3 class="text-xl font-semibold text-slate-700 mb-4 text-center">Key Design Patterns</h3>
+                    <div class="grid md:grid-cols-4 gap-4">
+                        <div class="text-center p-4 bg-slate-50 rounded-xl">
+                            <i class="fas fa-box text-3xl text-indigo-500 mb-2"></i>
+                            <div class="font-semibold text-slate-800">Outbox Pattern</div>
+                            <div class="text-xs text-slate-600">Reliable event delivery</div>
+                        </div>
+                        <div class="text-center p-4 bg-slate-50 rounded-xl">
+                            <i class="fas fa-sync text-3xl text-green-500 mb-2"></i>
+                            <div class="font-semibold text-slate-800">Retry with Backoff</div>
+                            <div class="text-xs text-slate-600">Spring Retry</div>
+                        </div>
+                        <div class="text-center p-4 bg-slate-50 rounded-xl">
+                            <i class="fas fa-lock text-3xl text-red-500 mb-2"></i>
+                            <div class="font-semibold text-slate-800">SSRF Protection</div>
+                            <div class="text-xs text-slate-600">URL validation</div>
+                        </div>
+                        <div class="text-center p-4 bg-slate-50 rounded-xl">
+                            <i class="fas fa-users text-3xl text-blue-500 mb-2"></i>
+                            <div class="font-semibold text-slate-800">Multi-Tenancy</div>
+                            <div class="text-xs text-slate-600">Client isolation</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 5: Event Lifecycle -->
+        <section class="slide flex items-center justify-center p-8 bg-slate-100" id="slide-4">
+            <div class="max-w-6xl w-full">
+                <h2 class="text-4xl font-bold text-slate-800 mb-8 text-center">
+                    <i class="fas fa-route text-blue-500 mr-3"></i>
+                    Notification Event Lifecycle
+                </h2>
+                
+                <div class="card-gradient p-6 rounded-2xl shadow-lg border border-slate-200">
+                    <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div class="flex-1 text-center">
+                            <div class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-white mx-auto mb-2">
+                                <i class="fas fa-broadcast-tower text-2xl"></i>
+                            </div>
+                            <div class="font-semibold text-slate-800">Event Produced</div>
+                            <div class="text-xs text-slate-600">eventId generated</div>
+                        </div>
+                        
+                        <i class="fas fa-arrow-right text-slate-400 text-2xl hidden md:block"></i>
+                        
+                        <div class="flex-1 text-center">
+                            <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center text-white mx-auto mb-2">
+                                <i class="fas fa-database text-2xl"></i>
+                            </div>
+                            <div class="font-semibold text-slate-800">Outbox Persistence</div>
+                            <div class="text-xs text-slate-600">Stored in DB</div>
+                        </div>
+                        
+                        <i class="fas fa-arrow-right text-slate-400 text-2xl hidden md:block"></i>
+                        
+                        <div class="flex-1 text-center">
+                            <div class="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center text-white mx-auto mb-2">
+                                <i class="fas fa-search text-2xl"></i>
+                            </div>
+                            <div class="font-semibold text-slate-800">Check Subscription</div>
+                            <div class="text-xs text-slate-600">Active & valid?</div>
+                        </div>
+                        
+                        <i class="fas fa-arrow-right text-slate-400 text-2xl hidden md:block"></i>
+                        
+                        <div class="flex-1 text-center">
+                            <div class="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center text-white mx-auto mb-2">
+                                <i class="fas fa-clock text-2xl"></i>
+                            </div>
+                            <div class="font-semibold text-slate-800">PENDING State</div>
+                            <div class="text-xs text-slate-600">Awaiting delivery</div>
+                        </div>
+                        
+                        <i class="fas fa-arrow-right text-slate-400 text-2xl hidden md:block"></i>
+                        
+                        <div class="flex-1 text-center">
+                            <div class="w-16 h-16 bg-purple-500 rounded-full flex items-center justify-center text-white mx-auto mb-2">
+                                <i class="fas fa-paper-plane text-2xl"></i>
+                            </div>
+                            <div class="font-semibold text-slate-800">Webhook Delivery</div>
+                            <div class="text-xs text-slate-600">Via WebClient</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-8 pt-6 border-t border-slate-200">
+                        <h4 class="font-semibold text-slate-700 mb-4 text-center">Delivery Outcomes</h4>
+                        <div class="grid md:grid-cols-4 gap-4">
+                            <div class="bg-green-50 p-4 rounded-xl border border-green-200">
+                                <div class="flex items-center mb-2">
+                                    <i class="fas fa-check-circle text-green-500 mr-2"></i>
+                                    <span class="font-semibold text-green-800">COMPLETED</span>
+                                </div>
+                                <p class="text-xs text-slate-600">Successfully delivered to webhook</p>
+                            </div>
+                            <div class="bg-red-50 p-4 rounded-xl border border-red-200">
+                                <div class="flex items-center mb-2">
+                                    <i class="fas fa-times-circle text-red-500 mr-2"></i>
+                                    <span class="font-semibold text-red-800">FAILED</span>
+                                </div>
+                                <p class="text-xs text-slate-600">Max retries exhausted</p>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                                <div class="flex items-center mb-2">
+                                    <i class="fas fa-ban text-gray-500 mr-2"></i>
+                                    <span class="font-semibold text-gray-800">IGNORED</span>
+                                </div>
+                                <p class="text-xs text-slate-600">No active subscription</p>
+                            </div>
+                            <div class="bg-blue-50 p-4 rounded-xl border border-blue-200">
+                                <div class="flex items-center mb-2">
+                                    <i class="fas fa-redo text-blue-500 mr-2"></i>
+                                    <span class="font-semibold text-blue-800">RETRY</span>
+                                </div>
+                                <p class="text-xs text-slate-600">Exponential backoff</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 card-gradient p-4 rounded-xl shadow border border-slate-200">
+                    <h4 class="font-semibold text-slate-700 mb-2">Concurrency Strategy</h4>
+                    <p class="text-sm text-slate-600">
+                        <i class="fas fa-lock text-purple-500 mr-2"></i>
+                        PostgreSQL <code class="bg-slate-100 px-2 py-1 rounded">SELECT ... FOR UPDATE SKIP LOCKED</code> ensures multiple instances can process events without duplicate deliveries.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 6: Security Implementation -->
+        <section class="slide flex items-center justify-center p-8 bg-white" id="slide-5">
+            <div class="max-w-6xl w-full">
+                <h2 class="text-4xl font-bold text-slate-800 mb-8 text-center">
+                    <i class="fas fa-shield-alt text-red-500 mr-3"></i>
+                    Security Implementation
+                </h2>
+                
+                <div class="grid md:grid-cols-2 gap-6 mb-6">
+                    <div class="card-gradient p-6 rounded-2xl shadow-lg border border-slate-200">
+                        <h3 class="text-xl font-semibold text-slate-700 mb-4">
+                            <i class="fas fa-user-shield text-blue-500 mr-2"></i>
+                            Authentication & Authorization
+                        </h3>
+                        <div class="space-y-3">
+                            <div class="bg-blue-50 p-3 rounded-lg">
+                                <div class="font-semibold text-blue-800 text-sm">JWT Authentication</div>
+                                <div class="text-xs text-slate-600">Stateless tokens with 24h expiration</div>
+                            </div>
+                            <div class="bg-blue-50 p-3 rounded-lg">
+                                <div class="font-semibold text-blue-800 text-sm">BCrypt Password Hashing</div>
+                                <div class="text-xs text-slate-600">Strength 10 for secure storage</div>
+                            </div>
+                            <div class="bg-blue-50 p-3 rounded-lg">
+                                <div class="font-semibold text-blue-800 text-sm">Custom UserDetailsService</div>
+                                <div class="text-xs text-slate-600">Database-backed user management</div>
+                            </div>
+                            <div class="bg-blue-50 p-3 rounded-lg">
+                                <div class="font-semibold text-blue-800 text-sm">BOLA/IDOR Protection</div>
+                                <div class="text-xs text-slate-600">Every query filtered by clientId</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-gradient p-6 rounded-2xl shadow-lg border border-slate-200">
+                        <h3 class="text-xl font-semibold text-slate-700 mb-4">
+                            <i class="fas fa-globe text-green-500 mr-2"></i>
+                            Webhook Security
+                        </h3>
+                        <div class="space-y-3">
+                            <div class="bg-green-50 p-3 rounded-lg">
+                                <div class="font-semibold text-green-800 text-sm">SSRF Mitigation</div>
+                                <div class="text-xs text-slate-600">Blocks private IPs, localhost, metadata endpoints</div>
+                            </div>
+                            <div class="bg-green-50 p-3 rounded-lg">
+                                <div class="font-semibold text-green-800 text-sm">DNS Rebinding Protection</div>
+                                <div class="text-xs text-slate-600">Validates resolved IP addresses</div>
+                            </div>
+                            <div class="bg-green-50 p-3 rounded-lg">
+                                <div class="font-semibold text-green-800 text-sm">HTTPS Enforcement</div>
+                                <div class="text-xs text-slate-600">Only secure webhook URLs allowed</div>
+                            </div>
+                            <div class="bg-green-50 p-3 rounded-lg">
+                                <div class="font-semibold text-green-800 text-sm">URL Validation</div>
+                                <div class="text-xs text-slate-600">Strict format and scheme checking</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-gradient p-6 rounded-2xl shadow-lg border border-slate-200">
+                    <h3 class="text-xl font-semibold text-slate-700 mb-4">
+                        <i class="fas fa-exclamation-circle text-amber-500 mr-2"></i>
+                        OWASP Top 10 Mitigations
+                    </h3>
+                    <div class="grid md:grid-cols-3 gap-4">
+                        <div class="bg-red-50 p-4 rounded-xl border border-red-200">
+                            <h4 class="font-semibold text-red-800 mb-2">A01: Broken Access Control</h4>
+                            <p class="text-xs text-slate-600">BOLA protection via clientId filtering in all queries</p>
+                        </div>
+                        <div class="bg-red-50 p-4 rounded-xl border border-red-200">
+                            <h4 class="font-semibold text-red-800 mb-2">A10: SSRF</h4>
+                            <p class="text-xs text-slate-600">URL validation, private IP blocking, DNS rebinding checks</p>
+                        </div>
+                        <div class="bg-red-50 p-4 rounded-xl border border-red-200">
+                            <h4 class="font-semibold text-red-800 mb-2">A07: Rate Limiting</h4>
+                            <p class="text-xs text-slate-600">Bucket4j on replay endpoint to prevent abuse</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 7: PoC vs Production -->
+        <section class="slide flex items-center justify-center p-8 bg-slate-100" id="slide-6">
+            <div class="max-w-6xl w-full">
+                <h2 class="text-4xl font-bold text-slate-800 mb-8 text-center">
+                    <i class="fas fa-balance-scale text-indigo-500 mr-3"></i>
+                    PoC vs Production Environment
+                </h2>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="card-gradient p-6 rounded-2xl shadow-lg border-2 border-blue-300">
+                        <div class="flex items-center mb-4">
+                            <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white mr-3">
+                                <i class="fas fa-flask text-xl"></i>
+                            </div>
+                            <h3 class="text-2xl font-bold text-blue-800">Proof of Concept</h3>
+                        </div>
+                        
+                        <div class="space-y-3">
+                            <div class="flex items-start">
+                                <i class="fas fa-check text-blue-500 mr-2 mt-1"></i>
+                                <span class="text-slate-700">Docker Compose for local development</span>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-check text-blue-500 mr-2 mt-1"></i>
+                                <span class="text-slate-700">Single PostgreSQL instance</span>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-check text-blue-500 mr-2 mt-1"></i>
+                                <span class="text-slate-700">Basic JWT with fixed secret</span>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-check text-blue-500 mr-2 mt-1"></i>
+                                <span class="text-slate-700">Embedded rate limiting (Bucket4j)</span>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-check text-blue-500 mr-2 mt-1"></i>
+                                <span class="text-slate-700">File-based logging</span>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-check text-blue-500 mr-2 mt-1"></i>
+                                <span class="text-slate-700">Mock data via Flyway migrations</span>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-check text-blue-500 mr-2 mt-1"></i>
+                                <span class="text-slate-700">Single application instance</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-gradient p-6 rounded-2xl shadow-lg border-2 border-green-300">
+                        <div class="flex items-center mb-4">
+                            <div class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white mr-3">
+                                <i class="fas fa-rocket text-xl"></i>
+                            </div>
+                            <h3 class="text-2xl font-bold text-green-800">Production Ready</h3>
+                        </div>
+                        
+                        <div class="space-y-3">
+                            <div class="flex items-start">
+                                <i class="fas fa-arrow-right text-green-500 mr-2 mt-1"></i>
+                                <span class="text-slate-700">Kubernetes deployment with HPA</span>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-arrow-right text-green-500 mr-2 mt-1"></i>
+                                <span class="text-slate-700">Managed PostgreSQL with replicas</span>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-arrow-right text-green-500 mr-2 mt-1"></i>
+                                <span class="text-slate-700">Secrets management (Vault/AWS SM)</span>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-arrow-right text-green-500 mr-2 mt-1"></i>
+                                <span class="text-slate-700">Distributed rate limiting (Redis)</span>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-arrow-right text-green-500 mr-2 mt-1"></i>
+                                <span class="text-slate-700">Centralized logging (ELK/Loki)</span>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-arrow-right text-green-500 mr-2 mt-1"></i>
+                                <span class="text-slate-700">Message queue (Kafka/RabbitMQ)</span>
+                            </div>
+                            <div class="flex items-start">
+                                <i class="fas fa-arrow-right text-green-500 mr-2 mt-1"></i>
+                                <span class="text-slate-700">Multiple instances with load balancing</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 card-gradient p-6 rounded-2xl shadow-lg border border-slate-200">
+                    <h3 class="text-xl font-semibold text-slate-700 mb-4">
+                        <i class="fas fa-lightbulb text-yellow-500 mr-2"></i>
+                        Production Improvements Roadmap
+                    </h3>
+                    <div class="grid md:grid-cols-4 gap-4">
+                        <div class="bg-slate-50 p-4 rounded-xl">
+                            <div class="font-semibold text-slate-800 mb-2">Infrastructure</div>
+                            <ul class="text-xs text-slate-600 space-y-1">
+                                <li>• Kubernetes deployment</li>
+                                <li>• Auto-scaling policies</li>
+                                <li>• Multi-region deployment</li>
+                            </ul>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl">
+                            <div class="font-semibold text-slate-800 mb-2">Observability</div>
+                            <ul class="text-xs text-slate-600 space-y-1">
+                                <li>• Distributed tracing</li>
+                                <li>• Real-time dashboards</li>
+                                <li>• Alerting (PagerDuty)</li>
+                            </ul>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl">
+                            <div class="font-semibold text-slate-800 mb-2">Security</div>
+                            <ul class="text-xs text-slate-600 space-y-1">
+                                <li>• Token refresh mechanism</li>
+                                <li>• Webhook signature verification</li>
+                                <li>• Certificate pinning</li>
+                            </ul>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl">
+                            <div class="font-semibold text-slate-800 mb-2">Performance</div>
+                            <ul class="text-xs text-slate-600 space-y-1">
+                                <li>• Event streaming (Kafka)</li>
+                                <li>• Caching layer (Redis)</li>
+                                <li>• Database connection pooling</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 8: Self-Service API -->
+        <section class="slide flex items-center justify-center p-8 bg-white" id="slide-7">
+            <div class="max-w-6xl w-full">
+                <h2 class="text-4xl font-bold text-slate-800 mb-8 text-center">
+                    <i class="fas fa-api text-teal-500 mr-3"></i>
+                    Self-Service REST API
+                </h2>
+                
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="card-gradient p-6 rounded-2xl shadow-lg border border-slate-200">
+                        <div class="flex items-center mb-4">
+                            <div class="w-10 h-10 bg-teal-500 rounded-lg flex items-center justify-center text-white mr-3">
+                                <span class="font-bold">GET</span>
+                            </div>
+                            <h3 class="font-semibold text-slate-800">List Events</h3>
+                        </div>
+                        <div class="code-block mb-4">
+                            /notification_events
+                        </div>
+                        <p class="text-sm text-slate-600 mb-3">Query notifications with filters</p>
+                        <div class="space-y-2">
+                            <div class="text-xs">
+                                <span class="font-semibold text-slate-700">Query Params:</span>
+                                <span class="text-slate-500">delivery_status, from, to, page, size</span>
+                            </div>
+                            <div class="text-xs">
+                                <span class="font-semibold text-slate-700">Auth:</span>
+                                <span class="text-slate-500">JWT Bearer token</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-gradient p-6 rounded-2xl shadow-lg border border-slate-200">
+                        <div class="flex items-center mb-4">
+                            <div class="w-10 h-10 bg-teal-500 rounded-lg flex items-center justify-center text-white mr-3">
+                                <span class="font-bold">GET</span>
+                            </div>
+                            <h3 class="font-semibold text-slate-800">Event Details</h3>
+                        </div>
+                        <div class="code-block mb-4">
+                            /notification_events/{id}
+                        </div>
+                        <p class="text-sm text-slate-600 mb-3">Retrieve specific notification</p>
+                        <div class="space-y-2">
+                            <div class="text-xs">
+                                <span class="font-semibold text-slate-700">Returns:</span>
+                                <span class="text-slate-500">Full event details with delivery history</span>
+                            </div>
+                            <div class="text-xs">
+                                <span class="font-semibold text-slate-700">Auth:</span>
+                                <span class="text-slate-500">JWT Bearer token</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-gradient p-6 rounded-2xl shadow-lg border border-slate-200">
+                        <div class="flex items-center mb-4">
+                            <div class="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center text-white mr-3">
+                                <span class="font-bold">POST</span>
+                            </div>
+                            <h3 class="font-semibold text-slate-800">Replay Event</h3>
+                        </div>
+                        <div class="code-block mb-4">
+                            /notification_events/{id}/replay
+                        </div>
+                        <p class="text-sm text-slate-600 mb-3">Retry failed notifications</p>
+                        <div class="space-y-2">
+                            <div class="text-xs">
+                                <span class="font-semibold text-slate-700">Constraint:</span>
+                                <span class="text-slate-500">Only FAILED events</span>
+                            </div>
+                            <div class="text-xs">
+                                <span class="font-semibold text-slate-700">Rate Limited:</span>
+                                <span class="text-slate-500">Bucket4j protection</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 card-gradient p-6 rounded-2xl shadow-lg border border-slate-200">
+                    <h3 class="text-xl font-semibold text-slate-700 mb-4">
+                        <i class="fas fa-key text-amber-500 mr-2"></i>
+                        Authentication Flow
+                    </h3>
+                    <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                        <div class="flex-1 text-center p-4 bg-slate-50 rounded-xl">
+                            <div class="font-semibold text-slate-800 mb-2">1. Login</div>
+                            <div class="text-xs text-slate-600 font-mono">POST /auth/login</div>
+                            <div class="text-xs text-slate-500 mt-1">username + password</div>
+                        </div>
+                        <i class="fas fa-arrow-right text-slate-400 hidden md:block"></i>
+                        <div class="flex-1 text-center p-4 bg-slate-50 rounded-xl">
+                            <div class="font-semibold text-slate-800 mb-2">2. Receive Token</div>
+                            <div class="text-xs text-slate-600 font-mono">JWT Bearer Token</div>
+                            <div class="text-xs text-slate-500 mt-1">24h expiration</div>
+                        </div>
+                        <i class="fas fa-arrow-right text-slate-400 hidden md:block"></i>
+                        <div class="flex-1 text-center p-4 bg-slate-50 rounded-xl">
+                            <div class="font-semibold text-slate-800 mb-2">3. Access API</div>
+                            <div class="text-xs text-slate-600 font-mono">Authorization: Bearer</div>
+                            <div class="text-xs text-slate-500 mt-1">clientId in claims</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Slide 9: Summary & Next Steps -->
+        <section class="slide gradient-bg flex items-center justify-center p-8" id="slide-8">
+            <div class="max-w-5xl w-full text-white">
+                <h2 class="text-4xl font-bold mb-8 text-center">
+                    <i class="fas fa-flag-checkered mr-3"></i>
+                    Summary & Next Steps
+                </h2>
+                
+                <div class="grid md:grid-cols-2 gap-6 mb-8">
+                    <div class="bg-white/10 backdrop-blur p-6 rounded-2xl">
+                        <h3 class="text-xl font-semibold mb-4">
+                            <i class="fas fa-check-circle mr-2"></i>
+                            What We Achieved
+                        </h3>
+                        <ul class="space-y-2 text-sm">
+                            <li class="flex items-start">
+                                <i class="fas fa-check mr-2 mt-1 text-green-300"></i>
+                                <span>Hexagonal architecture with clean separation</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check mr-2 mt-1 text-green-300"></i>
+                                <span>Transactional outbox with reliable delivery</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check mr-2 mt-1 text-green-300"></i>
+                                <span>Self-service REST API with JWT auth</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check mr-2 mt-1 text-green-300"></i>
+                                <span>OWASP security mitigations (BOLA, SSRF)</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check mr-2 mt-1 text-green-300"></i>
+                                <span>87% test coverage with integration tests</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check mr-2 mt-1 text-green-300"></i>
+                                <span>Docker Compose for local development</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check mr-2 mt-1 text-green-300"></i>
+                                <span>CI/CD pipeline with GHCR publishing</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-white/10 backdrop-blur p-6 rounded-2xl">
+                        <h3 class="text-xl font-semibold mb-4">
+                            <i class="fas fa-rocket mr-2"></i>
+                            Production Readiness Path
+                        </h3>
+                        <ul class="space-y-2 text-sm">
+                            <li class="flex items-start">
+                                <i class="fas fa-arrow-right mr-2 mt-1 text-yellow-300"></i>
+                                <span>Kubernetes deployment manifests</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-arrow-right mr-2 mt-1 text-yellow-300"></i>
+                                <span>Message queue integration (Kafka)</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-arrow-right mr-2 mt-1 text-yellow-300"></i>
+                                <span>Distributed observability stack</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-arrow-right mr-2 mt-1 text-yellow-300"></i>
+                                <span>Secrets management integration</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-arrow-right mr-2 mt-1 text-yellow-300"></i>
+                                <span>Webhook signature verification</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-arrow-right mr-2 mt-1 text-yellow-300"></i>
+                                <span>Token refresh mechanism</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-arrow-right mr-2 mt-1 text-yellow-300"></i>
+                                <span>Multi-region deployment strategy</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <div class="bg-white/20 backdrop-blur p-6 rounded-2xl inline-block">
+                        <h3 class="text-2xl font-bold mb-2">Repository</h3>
+                        <p class="text-sm opacity-90 mb-4">delivery-event-notifications-solution</p>
+                        <div class="flex gap-4 justify-center">
+                            <span class="bg-white/20 px-4 py-2 rounded-full text-sm">Java 17</span>
+                            <span class="bg-white/20 px-4 py-2 rounded-full text-sm">Spring Boot 3.x</span>
+                            <span class="bg-white/20 px-4 py-2 rounded-full text-sm">PostgreSQL</span>
+                            <span class="bg-white/20 px-4 py-2 rounded-full text-sm">Docker</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 text-center">
+                    <p class="text-lg opacity-90 mb-4">Thank you for your attention!</p>
+                    <p class="text-sm opacity-75">Questions & Discussion</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        function scrollToSlide(index) {
+            const slides = document.querySelectorAll('.slide');
+            slides[index].scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Update navigation dots on scroll
+        const scrollContainer = document.getElementById('scrollContainer');
+        const navDots = document.querySelectorAll('.nav-dot');
+
+        scrollContainer.addEventListener('scroll', () => {
+            const slides = document.querySelectorAll('.slide');
+            const scrollPosition = scrollContainer.scrollTop;
+            
+            slides.forEach((slide, index) => {
+                const slideTop = slide.offsetTop;
+                const slideBottom = slideTop + slide.offsetHeight;
+                
+                if (scrollPosition >= slideTop - 100 && scrollPosition < slideBottom - 100) {
+                    navDots.forEach(dot => dot.classList.remove('active'));
+                    navDots[index].classList.add('active');
+                }
+            });
+        });
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            const slides = document.querySelectorAll('.slide');
+            const currentSlide = Array.from(slides).findIndex(slide => {
+                const rect = slide.getBoundingClientRect();
+                return rect.top >= -100 && rect.top <= 100;
+            });
+
+            if (e.key === 'ArrowDown' || e.key === ' ') {
+                e.preventDefault();
+                if (currentSlide < slides.length - 1) {
+                    scrollToSlide(currentSlide + 1);
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (currentSlide > 0) {
+                    scrollToSlide(currentSlide - 1);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

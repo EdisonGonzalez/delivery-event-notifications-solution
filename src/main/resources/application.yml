@@ -14,10 +14,10 @@ spring:
           time_zone: UTC
   flyway:
     enabled: true
-  security:
-    user:
-      name: system
-      password: system
+
+jwt:
+  secret: your-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm
+  expiration: 86400000
 
 management:
   endpoints:
@@ -27,6 +27,10 @@ management:
   endpoint:
     health:
       show-details: always
+
+logging:
+  trace:
+    enabled: false
 
 notification:
   scheduler:

@@ -1,6 +1,7 @@
 # delivery-event-notifications-solution
 
-This repository implements a webhook notification solution with REST self-service, following Hexagonal Architecture, the Outbox pattern, OWASP security practices, and observability.
+This repository implements a webhook notification solution with REST self-service, following Hexagonal Architecture, the
+Outbox pattern, OWASP security practices, and observability.
 
 ## Confirmed solution decisions
 
@@ -127,7 +128,8 @@ The preferred strategy is PostgreSQL with `SELECT ... FOR UPDATE SKIP LOCKED` fo
 
 This avoids optimistic locking and allows multiple processor instances without duplicate deliveries.
 
-In the current implementation, batch claiming runs inside a transaction in `ProcessNotificationService.processBatch()` to keep locking consistent while the pending batch is retrieved.
+In the current implementation, batch claiming runs inside a transaction in `ProcessNotificationService.processBatch()`
+to keep locking consistent while the pending batch is retrieved.
 
 ### 2. Security
 
@@ -148,8 +150,8 @@ JPA auditing is enabled through `PersistenceConfig` and `AuditContextConfig`, us
 - `postgres` (PostgreSQL 15-alpine) with a persistent volume (`postgres_data`)
 - a database `healthcheck` so the application waits until PostgreSQL is healthy
 - `app` (the Spring Boot microservice) built from `Dockerfile`
-  - Application `healthcheck` using the `/actuator/health` endpoint
-  - Liveness and readiness probes for Kubernetes-like orchestrators
+    - Application `healthcheck` using the `/actuator/health` endpoint
+    - Liveness and readiness probes for Kubernetes-like orchestrators
 
 ### Start the local environment
 
@@ -166,6 +168,7 @@ docker compose up --build
 ```
 
 The override provides:
+
 - PostgreSQL port `5433` instead of `5432` to avoid conflicts with local instances
 - App port `8081` instead of `8080`
 - Spring `dev` profile enabled with `DEBUG` logs for `com.delivery.*`
@@ -190,6 +193,120 @@ docker compose down -v
 docker compose up --build
 ```
 
+## Postman collection and quick test guide
+
+The repository includes a Postman collection to exercise the main API flows (health, list events, get event, replay):
+
+- File: `docs/postman/DeliveryEventNotifications.postman_collection.json`
+
+Follow these steps (works from WSL2, Git Bash, macOS or Linux):
+
+1) Start the stack (run from the repository root):
+
+```sh
+docker compose up --build
+```
+
+2) Import the collection in Postman: `File > Import` and select
+   `docs/postman/DeliveryEventNotifications.postman_collection.json`.
+
+3) Configure collection variables when prompted or in the collection settings:
+
+- `baseUrl` – default `http://localhost:8080`
+- `eventId` – default `22222222-2222-2222-2222-222222222222` (seeded in `V2__mock_data.sql`)
+- `username` / `password` – default `system` / `system` (from `application.yml`)
+
+4) Subscriptions for demo are seeded by migrations:
+
+- `client-b` + `ORDER_CREATED` (used by `04 - Demo Inbound Notification + Outbound Webhook`)
+
+If you still want to create an extra manual subscription (for replay of seeded FAILED event), run:
+
+```sh
+docker exec -i notifications-postgres psql -U notifications -d notifications -c "INSERT INTO subscriptions (id, client_id, event_type, target_url, active, created_by, created_at, updated_by, updated_at, channel, correlation_id, version) VALUES ('44444444-4444-4444-4444-444444444444','client-b','ORDER_CANCELLED','https://webhook-receiver.example.com/webhook',true,'seed',now(),'seed',now(),'api','seed-sub-0001',0);"
+```
+
+Notes:
+
+- Replace `target_url` with a reachable webhook receiver (Webhook.site, ngrok, etc.) if you want deliveries to be
+  received.
+- The collection includes a `Replay Notification Event` request (POST) that triggers replay for the given `eventId`. Use
+  `22222222-2222-2222-2222-222222222222` to exercise the seeded `FAILED` event if you create the optional
+  `client-b` + `ORDER_CANCELLED` subscription above.
+
+Recommended Postman flow:
+
+1. POST `/auth/login` — authenticate and obtain JWT token (token is automatically stored in collection variables).
+2. GET `/actuator/health` — verify the app is healthy.
+3. GET `/notification_events` — list seeded events (uses JWT Bearer token).
+4. GET `/notification_events/{{eventId}}` — inspect specific event (uses JWT Bearer token).
+5. POST `/notification_events/{{eventId}}/replay` — trigger replay (uses JWT Bearer token).
+
+If you prefer not to run `psql` manually, I can add a dev-only `POST /subscriptions` HTTP endpoint (enabled only under
+the `dev` profile) so you can create subscriptions directly from Postman. Tell me if you want that and I'll implement it
+and update the collection.
+
+### Authentication and user management
+
+The application uses **JWT authentication** with **database-backed user management** and **BCrypt password hashing** for security.
+
+**Available users (all seeded in `V3__create_users_table.sql` and `V4__insert_users.sql`):**
+- `client-a` / `client-a` (can see only client-a events)
+- `client-b` / `client-b` (can see only client-b events; has seeded FAILED event)
+- `client-c` / `client-c` (can see only client-c events)
+- `system` / `system` (system account; can debug)
+
+**Security strategy:**
+- Passwords are stored as **BCrypt hashes** (strength 10) — never stored in plain text
+- Authentication uses **JWT tokens** obtained via `/auth/login` endpoint
+- Custom `UserDetailsService` (`CustomUserDetailsService`) loads users from the database
+- JWT tokens include **clientId claims** for BOLA (Broken Object Level Authorization) protection
+- Each client can only query **their own events** (filtered by `clientId` at application level)
+- Stateless authentication with configurable token expiration (default 24 hours)
+
+**JWT Authentication Flow:**
+1. Call `POST /auth/login` with username and password
+2. Receive JWT token in response
+3. Include JWT token in `Authorization: Bearer <token>` header for subsequent requests
+4. The JWT filter validates the token and sets the authentication context
+5. `CurrentClientProvider` extracts clientId from the JWT for BOLA protection
+
+**To create a new user in production, use a secure hashing tool:**
+
+```sh
+# Example: generate bcrypt hash for password "my-secure-password"
+# Using a bcrypt generator online: https://bcrypt-generator.com/ (set cost to 10)
+# Or in Java: new BCryptPasswordEncoder(10).encode("my-secure-password")
+```
+
+**To add a new user to the database:**
+
+```sql
+INSERT INTO users (id, username, password, client_id, enabled, created_at, updated_at)
+VALUES (
+  gen_random_uuid(),
+  'my-username',
+  '$2a$10$<bcrypt-hash-here>',  -- Replace with actual bcrypt hash
+  'client-id',
+  true,
+  now(),
+  now()
+);
+```
+
+**JWT Configuration:**
+- Secret key: configured via `jwt.secret` property (must be at least 256 bits for HS256)
+- Token expiration: configured via `jwt.expiration` property (default 86400000ms = 24 hours)
+- Signing algorithm: HMAC-SHA256
+
+**Security considerations for production:**
+- Use a strong, randomly generated secret key stored in environment variables or a secret vault
+- Implement token refresh mechanism for long-lived sessions
+- Add token revocation/blacklisting for logout scenarios
+- Consider adding audience and issuer claims for additional validation
+- Add rate limiting on `/auth/login` endpoint to prevent brute-force attacks
+- Use bcrypt strength 12 for production (slower but more resistant to brute-force)
+
 ## Flyway migrations and mock data
 
 The application runs Flyway at startup:
@@ -212,20 +329,21 @@ The records in `V2` include JSON content in `content` and do not leave events in
 ### Development flow
 
 1. **CI on each PR** is executed by `.github/workflows/ci-test.yml`:
-   - Runs `mvn clean test`
-   - Stores Surefire reports as artifacts for 30 days
-   - Triggers on `pull_request` and `push` to `main`/`develop`
+    - Runs `mvn clean test`
+    - Stores Surefire reports as artifacts for 30 days
+    - Triggers on `pull_request` and `push` to `main`/`develop`
 
 2. **GHCR publishing** is executed by `.github/workflows/publish-ghcr.yml`:
-   - Trigger: closed PR against `main` with a successful merge
-   - Multi-stage build with Docker Buildx
-   - Tags: `latest` and `sha` in `ghcr.io/${{ github.repository }}`
+    - Trigger: closed PR against `main` with a successful merge
+    - Multi-stage build with Docker Buildx
+    - Tags: `latest` and `sha` in `ghcr.io/${{ github.repository }}`
 
 ## Progress status (12 blueprint points)
 
 1. [x] Hexagonal architecture (domain, application, infrastructure)
 2. [x] Transactional outbox with scheduler and batch processing
-3. [x] Self-service API (`GET /notification_events`, `GET /notification_events/{id}`, `POST /notification_events/{id}/replay`)
+3. [x] Self-service API (`GET /notification_events`, `GET /notification_events/{id}`,
+   `POST /notification_events/{id}/replay`)
 4. [x] Retries with backoff and state transitions (`PENDING`, `COMPLETED`, `FAILED`, `IGNORED`)
 5. [x] BOLA/IDOR security via authenticated `clientId`
 6. [x] Rate limiting on the replay endpoint
@@ -233,7 +351,8 @@ The records in `V2` include JSON content in `content` and do not leave events in
 8. [x] PostgreSQL + Flyway (`V1__init.sql`, `V2__mock_data.sql`)
 9. [x] Local Docker (`Dockerfile`, `docker-compose.yml`, `docker-compose.override.yml`)
 10. [x] CI/CD in GitHub Actions (tests + GHCR publishing)
-11. [x] Tests: unit, REST integration, and an asynchronous webhook delivery end-to-end scenario (using embedded `HttpServer`)
+11. [x] Tests: unit, REST integration, and an asynchronous webhook delivery end-to-end scenario (using embedded
+    `HttpServer`)
 12. [x] Documentation/JavaDoc: public classes and methods documented in `src/main/java`
 
 ## Test coverage (JaCoCo)
@@ -256,9 +375,9 @@ HTML report available at `target/site/jacoco/index.html`.
 ## Local setup and usage
 
 - The `pom.xml` includes the `org.jacoco:jacoco-maven-plugin` configured to:
-  - prepare the agent before tests run (initialize phase),
-  - generate the report during the `verify` phase, and
-  - run a `check` step that fails the build if line coverage drops below 85%.
+    - prepare the agent before tests run (initialize phase),
+    - generate the report during the `verify` phase, and
+    - run a `check` step that fails the build if line coverage drops below 85%.
 
 - To run the full verification (tests + report + coverage check):
 
@@ -294,8 +413,10 @@ mvn spotless:apply
 
 ## CI notes
 
-- When you push the branch and run CI (GitHub Actions), the pipeline should run `mvn clean verify` or, at minimum, execute the plugin goals to ensure the report is generated and the coverage rule is enforced.
-- I recommend archiving `target/site/jacoco` as an artifact so the HTML report can be downloaded and reviewed from the pipeline run.
+- When you push the branch and run CI (GitHub Actions), the pipeline should run `mvn clean verify` or, at minimum,
+  execute the plugin goals to ensure the report is generated and the coverage rule is enforced.
+- I recommend archiving `target/site/jacoco` as an artifact so the HTML report can be downloaded and reviewed from the
+  pipeline run.
 
 ## Automated GHCR publishing
 

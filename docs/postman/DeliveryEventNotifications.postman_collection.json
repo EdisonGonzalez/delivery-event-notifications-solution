@@ -1,0 +1,797 @@
+{
+  "info": {
+    "name": "Delivery Event Notifications - API",
+    "_postman_id": "6b9f8e3a-0000-4000-8000-000000000000",
+    "description": "Coleccion ampliada para validar flujos funcionales y de seguridad del caso.\n\nOrden sugerido:\n1) 00 - Health\n2) 01 - Auth / Login OK (guarda token)\n3) 02 - Notification Events (list, filtros, paginacion, detalle, replay)\n4) 03 - Security and Isolation (sin token, token invalido, cross-tenant)\n\nCredenciales sembradas por Flyway:\n- client-a / client-a\n- client-b / client-b\n- client-c / client-c\n- system / system\n\nDatos mock clave:\n- Evento FAILED de client-b: 22222222-2222-2222-2222-222222222222\n- Evento COMPLETED de client-a: 11111111-1111-1111-1111-111111111111\n- Evento FAILED de client-c: 66666666-6666-6666-6666-666666666666",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "username",
+      "value": "client-b",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "client-b",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "clientBFailedEventId",
+      "value": "22222222-2222-2222-2222-222222222222",
+      "type": "string"
+    },
+    {
+      "key": "clientACompletedEventId",
+      "value": "11111111-1111-1111-1111-111111111111",
+      "type": "string"
+    },
+    {
+      "key": "clientCFailedEventId",
+      "value": "66666666-6666-6666-6666-666666666666",
+      "type": "string"
+    },
+    {
+      "key": "invalidToken",
+      "value": "invalid.jwt.value",
+      "type": "string"
+    },
+    {
+      "key": "demoWebhookUrl",
+      "value": "https://webhook.site/replace-me",
+      "type": "string"
+    },
+    {
+      "key": "demoEventType",
+      "value": "ORDER_CREATED",
+      "type": "string"
+    },
+    {
+      "key": "createdNotificationEventId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "00 - Health",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "01 - Auth",
+      "item": [
+        {
+          "name": "Login OK (usa variables username/password)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Token presente', function () {",
+                  "  pm.expect(jsonData.token).to.exist;",
+                  "});",
+                  "pm.collectionVariables.set('token', jsonData.token);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Login INVALIDO (401)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"wrong-password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 401', function () {",
+                  "  pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Login client-a (para pruebas cross-tenant)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"client-a\",\n  \"password\": \"client-a\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.collectionVariables.set('token', jsonData.token);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 - Notification Events",
+      "item": [
+        {
+          "name": "List Notification Events",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notification_events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notification_events"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "List with pagination (page=0,size=1)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notification_events?page=0&size=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notification_events"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "1"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List with status filter (delivery_status=FAILED)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notification_events?delivery_status=FAILED",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notification_events"
+              ],
+              "query": [
+                {
+                  "key": "delivery_status",
+                  "value": "FAILED"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List with date range",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notification_events?from=2020-01-01T00:00:00Z&to=2100-01-01T00:00:00Z",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notification_events"
+              ],
+              "query": [
+                {
+                  "key": "from",
+                  "value": "2020-01-01T00:00:00Z"
+                },
+                {
+                  "key": "to",
+                  "value": "2100-01-01T00:00:00Z"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Notification Event by Id (own)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notification_events/{{clientBFailedEventId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notification_events",
+                "{{clientBFailedEventId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Replay FAILED event (202)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notification_events/{{clientBFailedEventId}}/replay",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notification_events",
+                "{{clientBFailedEventId}}",
+                "replay"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Replay non-FAILED event (409)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notification_events/{{clientACompletedEventId}}/replay",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notification_events",
+                "{{clientACompletedEventId}}",
+                "replay"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 - Security and Isolation",
+      "item": [
+        {
+          "name": "List without token (403)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notification_events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notification_events"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List with invalid token (403)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{invalidToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notification_events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notification_events"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cross-tenant get by id (client-a against client-b -> 404)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notification_events/{{clientBFailedEventId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notification_events",
+                "{{clientBFailedEventId}}"
+              ]
+            },
+            "description": "Antes de ejecutar este request, ejecuta 'Login client-a' para cargar token de client-a."
+          },
+          "response": []
+        },
+        {
+          "name": "Pagination validation error (size>100 -> 400)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notification_events?page=0&size=101",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notification_events"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "101"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04 - Demo Inbound Notification + Outbound Webhook",
+      "description": "Flujo demo para simular la llegada de una notificacion mediante POST /notification_events y observar el estado resultante.\n\nIMPORTANTE:\n- Hoy NO existe endpoint REST para crear subscriptions.\n- Debes crear una subscription activa en DB para el cliente autenticado y el mismo eventType.\n- La implementacion actual usa `webhookUrl` del request del evento como destino real del webhook saliente.\n- La tabla `subscriptions` actua como habilitador/validacion de que el cliente esta suscrito, pero su `target_url` no se usa como destino efectivo en este flujo actual.\n\nNota: el pre-request script de este folder autentica automaticamente con las variables username/password si el token esta vacio.",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Auto-login if token is missing or empty",
+              "const token = pm.collectionVariables.get('token');",
+              "if (!token || token.trim() === '') {",
+              "  const baseUrl = pm.collectionVariables.get('baseUrl') || 'http://localhost:8080';",
+              "  const username = pm.collectionVariables.get('username') || 'client-b';",
+              "  const password = pm.collectionVariables.get('password') || 'client-b';",
+              "  pm.sendRequest({",
+              "    url: baseUrl + '/auth/login',",
+              "    method: 'POST',",
+              "    header: { 'Content-Type': 'application/json' },",
+              "    body: {",
+              "      mode: 'raw',",
+              "      raw: JSON.stringify({ username: username, password: password })",
+              "    }",
+              "  }, function (err, res) {",
+              "    if (err) {",
+              "      console.error('Auto-login failed:', err);",
+              "    } else if (res.code === 200) {",
+              "      const jwt = res.json().token;",
+              "      pm.collectionVariables.set('token', jwt);",
+              "      console.log('Auto-login OK: token stored for user ' + username);",
+              "    } else {",
+              "      console.error('Auto-login returned status', res.code, res.text());",
+              "    }",
+              "  });",
+              "}"
+            ]
+          }
+        }
+      ],
+      "item": [
+        {
+          "name": "Create Notification Event (demo inbound)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventId\": \"evt-demo-{{$timestamp}}\",\n  \"eventType\": \"{{demoEventType}}\",\n  \"content\": \"{\\\"orderId\\\":\\\"ORD-{{$timestamp}}\\\",\\\"status\\\":\\\"CREATED\\\",\\\"source\\\":\\\"postman-demo\\\"}\",\n  \"webhookUrl\": \"{{demoWebhookUrl}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/notification_events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notification_events"
+              ]
+            },
+            "description": "Simula la llegada de una notificacion al sistema.\n\nRequisitos para entrega real:\n1) Login previo para obtener `token`.\n2) `demoWebhookUrl` debe apuntar a un receptor alcanzable (por ejemplo Webhook.site).\n3) Debe existir una fila activa en `subscriptions` para el cliente autenticado y `eventType={{demoEventType}}`.\n\nSi la subscription no existe, el evento se guardara pero terminara como `IGNORED`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', function () {",
+                  "  pm.response.to.have.status(201);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Id del evento creado presente', function () {",
+                  "  pm.expect(jsonData.id).to.exist;",
+                  "});",
+                  "pm.collectionVariables.set('createdNotificationEventId', jsonData.id);"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Get Created Notification Event (demo)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notification_events/{{createdNotificationEventId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notification_events",
+                "{{createdNotificationEventId}}"
+              ]
+            },
+            "description": "Consulta el evento creado por el request demo. Si la entrega fue exitosa, deberia verse `COMPLETED`; si no habia subscription activa, `IGNORED`; si el webhook fallo tras los reintentos, `FAILED`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "pm.test('Campo deliveryStatus presente', function () {",
+                  "  pm.expect(jsonData.deliveryStatus).to.exist;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "response": []
+        },
+        {
+          "name": "Replay Created Notification Event (demo)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notification_events/{{createdNotificationEventId}}/replay",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notification_events",
+                "{{createdNotificationEventId}}",
+                "replay"
+              ]
+            },
+            "description": "Reintenta la entrega del evento demo creado. Solo aplica si el evento termino en `FAILED`."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
+

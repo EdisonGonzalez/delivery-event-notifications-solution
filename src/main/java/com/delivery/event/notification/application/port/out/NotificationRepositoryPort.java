@@ -2,6 +2,7 @@ package com.delivery.event.notification.application.port.out;
 
 import com.delivery.event.notification.domain.model.DeliveryStatus;
 import com.delivery.event.notification.domain.model.NotificationEvent;
+import com.delivery.event.notification.infrastructure.web.dto.Page;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -11,8 +12,8 @@ import java.util.UUID;
 public interface NotificationRepositoryPort {
 
   /** Lists events for a client using optional filters. */
-  List<NotificationEvent> findAllByClientIdAndFilter(
-      String clientId, DeliveryStatus status, Instant from, Instant to);
+  Page<NotificationEvent> findAllByClientIdAndFilter(
+      String clientId, DeliveryStatus status, Instant from, Instant to, int page, int size);
 
   /** Finds an event by id restricted to the authenticated client. */
   Optional<NotificationEvent> findByIdAndClientId(UUID notificationEventId, String clientId);
