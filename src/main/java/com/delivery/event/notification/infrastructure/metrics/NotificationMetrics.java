@@ -5,15 +5,22 @@ import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.stereotype.Component;
 
-/**
- * Queue health metrics.
- */
+/** Queue health metrics. */
 @Component
 public class NotificationMetrics {
 
-    public NotificationMetrics(MeterRegistry meterRegistry, NotificationRepositoryPort repositoryPort) {
-        Gauge.builder("notifications.queue.pending.size", repositoryPort, NotificationRepositoryPort::countPending)
-                .register(meterRegistry);
-    }
+  /**
+   * Registers notification queue health metrics.
+   *
+   * @param meterRegistry Application metrics registry.
+   * @param repositoryPort Port used to inspect the pending queue.
+   */
+  public NotificationMetrics(
+      MeterRegistry meterRegistry, NotificationRepositoryPort repositoryPort) {
+    Gauge.builder(
+            "notifications.queue.pending.size",
+            repositoryPort,
+            NotificationRepositoryPort::countPending)
+        .register(meterRegistry);
+  }
 }
-

@@ -1,73 +1,104 @@
-# Agent history (resumen de interacción y decisiones)
+# Agent history (interaction and decisions summary)
 
-Este archivo recoge un resumen de las decisiones, cambios y pasos ejecutados por el agente durante la implementación del proyecto.
+This file summarizes the decisions, changes, and steps performed by the agent during the implementation of the project.
 
-## Resumen de acciones
+## Action summary
 
-- Añadido soporte Docker / Docker Compose para despliegue local (PostgreSQL + app).
-- Creado `Dockerfile` multi-stage para build y runtime con Java 21.
-- Añadido `.dockerignore` para reducir contexto de build.
-- Añadida migración `V2__mock_data.sql` con datos de ejemplo en `notification_events`.
-- Flyway configurado y ejecutado al arrancar la app.
-- CI: workflow de publicación en GHCR (`.github/workflows/publish-ghcr.yml`) al merge de PR a `main`.
-- CI: workflow de CI que ejecuta `mvn test` en PRs (`.github/workflows/ci-test.yml`).
-- `docker-compose.override.yml` creado para perfil `dev` con puertos alternativos y logging.
-- Documentación (`README.md`) actualizada para dejar claro que se usa PostgreSQL (no H2).
-- Implementado y validado el punto 1 (concurrencia `SKIP LOCKED`) y punto 3 (auditoría con `AuditContextConfig`).
-- Añadidos tests de integración para los endpoints REST que verifican autorización por cliente.
+- Added Docker / Docker Compose support for local deployment (PostgreSQL + app).
+- Created a multi-stage `Dockerfile` for build and runtime with Java 21.
+- Added `.dockerignore` to reduce the build context.
+- Added migration `V2__mock_data.sql` with sample data in `notification_events`.
+- Configured Flyway and executed it on application startup.
+- CI: GHCR publishing workflow (`.github/workflows/publish-ghcr.yml`) on PR merge into `main`.
+- CI: CI workflow that runs `mvn test` on PRs (`.github/workflows/ci-test.yml`).
+- Created `docker-compose.override.yml` for the `dev` profile with alternate ports and logging.
+- Updated documentation (`README.md`) to make it clear that PostgreSQL is used (not H2).
+- Implemented and validated point 1 (`SKIP LOCKED` concurrency) and point 3 (auditing with `AuditContextConfig`).
+- Added integration tests for the REST endpoints that verify client-based authorization.
 
-## Notas sobre decisiones importantes
+## Recent iteration (Flyway 12.8.1 with PostgreSQL 15 and Actuator healthchecks)
 
-- PostgreSQL es la única DB soportada para evitar diferencias de dialecto/locking entre entornos.
-- Seguridad: configuración mínima con HTTP Basic para simplificar pruebas locales; en producción se debe sustituir por un proveedor de identidad (OAuth2/JWT) según requerimientos.
-- Reintentos: `Spring Retry` configurado para control de backoff en el delivery adaptador.
+- **Fixed Flyway "Unsupported Database" error**: upgraded `flyway-core` to `12.8.1` and added `flyway-database-postgresql:12.8.1` module
+- **PostgreSQL 15**: changed Docker image from `postgres:16-alpine` to `postgres:15-alpine` for better Flyway 12.8.1 compatibility
+- **Flyway enabled by default**: changed `spring.flyway.enabled: false` to `true` in `application.yml` (default profile)
+- **Application healthcheck**: added Docker healthcheck to the `app` service using `/actuator/health` endpoint
+  - Interval: 10 seconds
+  - Timeout: 5 seconds
+  - Retries: 5 attempts
+  - Start period: 30 seconds (grace period before health checks begin)
+- **Verified migrations**: both `V1__init.sql` (schema) and `V2__mock_data.sql` (sample data) execute successfully on startup
 
-## Cómo reproducir localmente
+## Notes on important decisions
 
-Levantar infra y app:
+- PostgreSQL is the only supported database to avoid dialect/locking differences between environments.
+- **PostgreSQL 15** is the baseline version for Flyway 12.x compatibility; it is well-supported and LTS.
+- **Spring Boot Actuator** `/actuator/health` endpoint is used for Docker healthchecks to provide liveness/readiness probes compatible with Kubernetes.
+- Security: minimal HTTP Basic configuration to simplify local testing; in production it should be replaced with an
+  identity provider (OAuth2/JWT) as required.
+- Retries: `Spring Retry` configured to control backoff in the delivery adapter.
+
+## How to reproduce locally
+
+Start the infrastructure and app:
 
 ```powershell
 docker compose up --build
 ```
 
-Ejecutar tests localmente:
+The output will show both `postgres` and `app` containers reaching healthy state:
+
+```
+[+] Running 4/4
+ ✔ Network delivery-event-notifications-solution_default       Created                                                                                                         0.1s 
+ ✔ Volume delivery-event-notifications-solution_postgres_data  Created                                                                                                         0.0s 
+ ✔ Container notifications-postgres                            Healthy                                                                                                         6.5s 
+ ✔ Container delivery-event-notifications-app                  Started (Healthy after ~30-40 seconds)
+```
+
+Run tests locally:
 
 ```powershell
 mvn test
 ```
 
-## Cambios de código relevantes
+## Relevant code changes
 
-- `docker-compose.yml`, `Dockerfile`, `.dockerignore`
+- `docker-compose.yml` (added app healthcheck, updated postgres image to 15-alpine)
+- `pom.xml` (added `flyway-database-postgresql:12.8.1`)
+- `src/main/resources/application.yml` (enabled Flyway)
+- `Dockerfile`, `.dockerignore`
 - `src/main/resources/db/migration/V2__mock_data.sql`
 - `.github/workflows/publish-ghcr.yml`, `.github/workflows/ci-test.yml`
-- `README.md` (actualización de decisiones y uso de Docker)
-- `src/test/java/.../NotificationEventControllerIntegrationTest.java` (tests de integración)
+- `README.md` (updated Docker and Flyway documentation)
+- `src/test/java/.../NotificationEventControllerIntegrationTest.java` (integration tests)
 
-## Iteración reciente (estabilización de tests e integración replay)
+## Recent iteration (test stabilization and replay integration)
 
-- Se ajustó la query en `NotificationEventJpaRepository` para evitar errores de tipado de parámetros nulos en PostgreSQL (`coalesce` en filtros opcionales).
-- Se estabilizaron los tests de integración sembrando datos explícitos en `@BeforeEach` sin depender de Flyway en perfil `test`.
-- Se añadieron casos de integración para `POST /notification_events/{id}/replay`:
-  - replay exitoso para evento `FAILED` del cliente autenticado (`202 Accepted`)
-  - replay rechazado para evento no `FAILED` (`409 Conflict`)
-  - verificación BOLA/IDOR para eventos de otro cliente (`404 Not Found`)
-- Se configuró `maven-surefire-plugin` con `forkedProcessExitTimeoutInSeconds=120` para evitar warning de terminación forzada en ejecuciones con Spring Boot + Testcontainers.
-- Validación final ejecutada con `mvn test`: suite completa en verde.
+- The query in `NotificationEventJpaRepository` was adjusted to avoid null-parameter typing issues in PostgreSQL (
+  `coalesce` in optional filters).
+- Integration tests were stabilized by seeding explicit data in `@BeforeEach` without relying on Flyway in the `test`
+  profile.
+- Integration cases were added for `POST /notification_events/{id}/replay`:
+    - successful replay for a `FAILED` event owned by the authenticated client (`202 Accepted`)
+    - replay rejected for a non-`FAILED` event (`409 Conflict`)
+    - BOLA/IDOR validation for another client’s event (`404 Not Found`)
+- `maven-surefire-plugin` was configured with `forkedProcessExitTimeoutInSeconds=120` to avoid forced-termination
+  warnings in Spring Boot + Testcontainers runs.
+- Final validation was executed with `mvn test`: full suite green.
 
-## Iteración reciente (cobertura y entrega async)
+## Recent iteration (coverage and async delivery)
 
-- Se añadieron tests unitarios para `NotificationDeliveryProcessor` cubriendo ramas de `IGNORED`, `COMPLETED` y `recover` en fallo.
-- Se añadió test end-to-end HTTP para `WebhookDeliveryAdapter` usando `HttpServer` del JDK:
-  - envío de payload exitoso a endpoint `/hook`
-  - propagación de error ante respuesta `500`
-- Se renombró el archivo de prueba a `WebhookDeliveryAdapterHttpServerTest` para reflejar la tecnología real usada.
-- Validación ejecutada con `mvn test`: `30` tests, `0` fallos, `0` errores.
-- Cobertura JaCoCo actualizada:
-  - Instruction: `86.67%`
-  - Branch: `82.50%`
-  - Line: `87.66%`
-  - Method: `86.23%`
+- Unit tests were added for `NotificationDeliveryProcessor` covering `IGNORED`, `COMPLETED`, and `recover` failure
+  branches.
+- An end-to-end HTTP test was added for `WebhookDeliveryAdapter` using the JDK `HttpServer`:
+    - successful payload delivery to `/hook`
+    - error propagation when the endpoint returns `500`
+- The test file was renamed to `WebhookDeliveryAdapterHttpServerTest` to reflect the actual technology used.
+- Validation was executed with `mvn test`: `30` tests, `0` failures, `0` errors.
+- JaCoCo coverage was updated:
+    - Instruction: `86.67%`
+    - Branch: `82.50%`
+    - Line: `87.66%`
+    - Method: `86.23%`
 
--- FIN --
-
+-- END --

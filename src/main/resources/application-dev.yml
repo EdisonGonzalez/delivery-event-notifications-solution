@@ -1,11 +1,17 @@
 spring:
-  profiles: dev
+  config:
+    activate:
+      on-profile: dev
   jpa:
     show-sql: true
+    hibernate:
+      ddl-auto: validate
     properties:
       hibernate:
         format_sql: true
         use_sql_comments: true
+  flyway:
+    enabled: true
 
 logging:
   level:

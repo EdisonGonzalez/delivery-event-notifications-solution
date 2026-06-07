@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:15-alpine
     container_name: notifications-postgres
     environment:
       POSTGRES_DB: notifications
@@ -11,7 +11,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U notifications -d notifications"]
+      test: [ "CMD-SHELL", "pg_isready -U notifications -d notifications" ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -31,6 +31,12 @@ services:
       SPRING_DATASOURCE_PASSWORD: notifications
     ports:
       - "8080:8080"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 volumes:
   postgres_data:
